@@ -1,18 +1,18 @@
 {
-  "name": "jest-trx-results-processor-example",
-  "description": "Example for jest-trx-results-processor",
-  "author": "Dan Homola",
-  "user": "no23reason",
+  "name": "vitest-trx-results-processor-example",
+  "description": "Example for vitest-trx-results-processor",
+  "author": "Christian Wissmach",
+  "user": "christian-wissmach",
   "version": "0.0.1",
   "license": "MIT",
   "scripts": {
-    "test": "jest"
+    "test": "vitest --run"
   },
   "devDependencies": {
-    "jest": "^19.0.0",
-    "jest-trx-results-processor": "~0.0.5"
+    "vitest": "^3.0.5",
+    "vitest-trx-results-processor": "~0.0.5"
   },
   "jest": {
-    "testResultsProcessor": "./scripts/jestTrxProcessor"
+    "testResultsProcessor": "./scripts/vitestTrxProcessor"
   }
 }
