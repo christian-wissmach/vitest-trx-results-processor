@@ -1,757 +1,837 @@
-import {
-  AggregatedResult,
-  AssertionResult,
-  SnapshotSummary,
-  TestResult,
-} from "@jest/test-result";
-import "jest";
+import {generateTrx, IOptions} from "../trx-generator";
+import {describe, expect, it} from 'vitest';
+import {TestCase, TestModule, TestSuite} from "vitest/node";
+import {XMLElement} from "xmlbuilder";
 import xml2js = require("xml2js");
-import xmlbuilder = require("xmlbuilder");
-import { generateTrx, IOptions } from "../trx-generator";
 
 describe("trx-generator", (): void => {
-  const emptySnapshotSummary: SnapshotSummary = {
-    added: 0,
-    didUpdate: false,
-    failure: false,
-    filesAdded: 0,
-    filesRemoved: 0,
-    filesRemovedList: [],
-    filesUnmatched: 0,
-    filesUpdated: 0,
-    matched: 0,
-    total: 0,
-    unchecked: 0,
-    uncheckedKeysByFile: [],
-    unmatched: 0,
-    updated: 0,
-  };
+    it("processes the results correctly", (): void => {
 
-  const emptySnapshot: TestResult["snapshot"] = {
-    added: 0,
-    fileDeleted: false,
-    matched: 0,
-    unchecked: 0,
-    uncheckedKeys: [],
-    unmatched: 0,
-    updated: 0,
-  };
-
-  it("processes the results correctly", (done): void => {
-    const input: AggregatedResult = {
-      success: true,
-      startTime: 1478771929,
-      numTotalTestSuites: 1,
-      numPassedTestSuites: 0,
-      numFailedTestSuites: 1,
-      numPendingTestSuites: 0,
-      numRuntimeErrorTestSuites: 0,
-      numTotalTests: 2,
-      numPassedTests: 1,
-      numFailedTests: 1,
-      numPendingTests: 0,
-      numTodoTests: 0,
-      openHandles: [],
-      snapshot: emptySnapshotSummary,
-      testResults: [
-        {
-          coverage: {},
-          leaks: false,
-          numFailingTests: 1,
-          numPassingTests: 1,
-          numPendingTests: 0,
-          numTodoTests: 0,
-          openHandles: [],
-          perfStats: {
-            start: 1478771929,
-            end: 1478778929,
-            runtime: 0,
-            slow: false,
-          },
-          skipped: false,
-          snapshot: emptySnapshot,
-          testFilePath: "C:\\testPath\\test.js",
-          testResults: [
-            {
-              ancestorTitles: ["foo's", "bar method"],
-              failureMessages: [],
-              numPassingAsserts: 1,
-              status: "passed",
-              title: "works well",
-              fullName: "foo's > bar method > works well",
-              location: {
-                column: 0,
-                line: 0,
-              },
-              failureDetails: [],
-              duration: 4100,
+        const test1: TestCase = {
+            module: {
+                moduleId: "C:\\testPath\\test.js",
             },
-            {
-              ancestorTitles: ["foo's", "bar method"],
-              failureMessages: ["This did not go as planned"],
-              numPassingAsserts: 1,
-              status: "failed",
-              title: "works not so well",
-              fullName: "foo's > bar method > works not so well",
-              location: {
-                column: 0,
-                line: 0,
-              },
-              failureDetails: [],
-              duration: 2900,
-            },
-          ],
-        },
-      ],
-      wasInterrupted: false,
-    };
-    const result = generateTrx(input);
-    xml2js.parseString(result, (err, parsed) => {
-      expect(err).toBeFalsy();
-      expect(parsed).toBeTruthy();
-      expect(parsed.TestRun).toBeTruthy();
-      expect(parsed.TestRun.$).toBeTruthy();
-      expect(parsed.TestRun.$.xmlns).toEqual(
-        "http://microsoft.com/schemas/VisualStudio/TeamTest/2010",
-      );
-      expect(parsed.TestRun.Results).toBeTruthy();
-      expect(parsed.TestRun.Results.length).toEqual(1);
-      expect(parsed.TestRun.Results[0].UnitTestResult.length).toEqual(2);
-      expect(parsed.TestRun.Results[0].UnitTestResult[0].$.outcome).toEqual(
-        "Passed",
-      );
-      expect(parsed.TestRun.Results[0].UnitTestResult[0].$.duration).toEqual(
-        "00:00:04.100",
-      );
-      expect(parsed.TestRun.Results[0].UnitTestResult[1].$.outcome).toEqual(
-        "Failed",
-      );
-      expect(parsed.TestRun.Results[0].UnitTestResult[1].$.duration).toEqual(
-        "00:00:02.900",
-      );
+            result: () => ({
+                state: "passed"
+            }),
+            name: "works well",
+            fullName: () => "foo's > bar method > works well",
+            diagnostic: () => ({
+                startTime: 1478771929,
+                duration: 4100
+            }),
+        } as TestCase;
 
-      done();
+        const test2: TestCase = {
+            module: {
+                moduleId: "C:\\testPath\\test.js",
+            },
+            result: () => ({
+                state: "failed",
+                errors: [{
+                    message: "This did not go as planned"
+                }],
+                location: {
+                    column: 0,
+                    line: 0,
+                },
+            }),
+            name: "works not so well",
+            fullName: () => "foo's > bar method > works not so well",
+            diagnostic: () => ({
+                startTime: (1478771929 + 4100),
+                duration: 2900
+            }),
+        } as TestCase;
+
+        const mockIterator = function () {
+            let index = 0;
+            const values = [test1, test2];
+
+            return {
+                next: function () {
+                    if (index < values.length) {
+                        return {value: values[index++], done: false};
+                    } else {
+                        return {value: undefined, done: true};
+                    }
+                }
+            };
+        };
+
+        const module: TestModule = {
+            moduleId: "C:\\testPath\\test.js",
+            children: {
+                allSuites: () => [testSuite],
+                allTests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                }),
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                }),
+            },
+            state: () => 'passed',
+            ok: () => true,
+            diagnostic: () => ({
+                duration: (4100 + 2900)
+            }),
+            errors: () => []
+        } as TestModule;
+
+        const testSuite: TestSuite = {
+            module: module,
+            children: {
+                allTests: () => [test1, test2],
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                })
+            },
+            errors: () => []
+        } as TestSuite;
+
+        const result = generateTrx([module]);
+
+        xml2js.parseString(result, (err, parsed) => {
+            expect(err).toBeFalsy();
+            expect(parsed).toBeTruthy();
+            expect(parsed.TestRun).toBeTruthy();
+            expect(parsed.TestRun.$).toBeTruthy();
+            expect(parsed.TestRun.$.xmlns).toEqual(
+                "http://microsoft.com/schemas/VisualStudio/TeamTest/2010",
+            );
+            expect(parsed.TestRun.Results).toBeTruthy();
+            expect(parsed.TestRun.Results.length).toEqual(1);
+            expect(parsed.TestRun.Results[0].UnitTestResult.length).toEqual(2);
+            expect(parsed.TestRun.Results[0].UnitTestResult[0].$.outcome).toEqual(
+                "Passed",
+            );
+            expect(parsed.TestRun.Results[0].UnitTestResult[0].$.duration).toEqual(
+                "00:00:04.100",
+            );
+            expect(parsed.TestRun.Results[0].UnitTestResult[1].$.outcome).toEqual(
+                "Failed",
+            );
+            expect(parsed.TestRun.Results[0].UnitTestResult[1].$.duration).toEqual(
+                "00:00:02.900",
+            );
+        });
     });
-  });
+    it("handles error message with invalid XML chars correctly", (): void => {
 
-  it("handles error message with invalid XML chars correctly", (): void => {
-    const input: AggregatedResult = {
-      success: true,
-      startTime: 1478771929,
-      numTotalTestSuites: 1,
-      numPassedTestSuites: 0,
-      numFailedTestSuites: 1,
-      numPendingTestSuites: 0,
-      numRuntimeErrorTestSuites: 0,
-      numTotalTests: 2,
-      numPassedTests: 1,
-      numFailedTests: 1,
-      numPendingTests: 0,
-      numTodoTests: 0,
-      openHandles: [],
-      snapshot: emptySnapshotSummary,
-      testResults: [
-        {
-          coverage: {},
-          leaks: false,
-          numFailingTests: 1,
-          numPassingTests: 1,
-          numPendingTests: 0,
-          numTodoTests: 0,
-          openHandles: [],
-          skipped: false,
-          snapshot: emptySnapshot,
-          perfStats: {
-            start: 1478771929,
-            end: 1478778929,
-            runtime: 0,
-            slow: false,
-          },
-          testFilePath: "C:\\testPath\\test.js",
-          testResults: [
-            {
-              ancestorTitles: ["foo's", "bar method"],
-              failureMessages: [],
-              numPassingAsserts: 1,
-              status: "passed",
-              title: "works well",
-              fullName: "foo's > bar method > works well",
-              location: {
-                column: 0,
-                line: 0,
-              },
-              failureDetails: [],
-              duration: 4100,
+        const test1: TestCase = {
+            module: {
+                moduleId: "C:\\testPath\\test.js",
             },
-            {
-              ancestorTitles: ["foo's", "bar method"],
-              failureMessages: ["This did not go as planned\uDFFF"],
-              numPassingAsserts: 1,
-              status: "failed",
-              title: "works not so well",
-              fullName: "foo's > bar method > works not so well",
-              location: {
-                column: 0,
-                line: 0,
-              },
-              failureDetails: [],
-              duration: 2900,
+            result: () => ({
+                state: "passed"
+            }),
+            name: "works well",
+            fullName: () => "foo's > bar method > works well",
+            diagnostic: () => ({
+                startTime: 1478771929,
+                duration: 4100
+            }),
+        } as TestCase;
+
+        const test2: TestCase = {
+            module: {
+                moduleId: "C:\\testPath\\test.js",
             },
-          ],
-        },
-      ],
-      wasInterrupted: false,
-    };
-    const result = generateTrx(input);
-    expect(result).toBeTruthy();
-  });
+            result: () => ({
+                state: "failed",
+                errors: [{
+                    message: "This did not go as planned\uDFFF"
+                }],
+                location: {
+                    column: 0,
+                    line: 0,
+                },
+            }),
+            name: "works not so well",
+            fullName: () => "foo's > bar method > works not so well",
+            diagnostic: () => ({
+                startTime: (1478771929 + 4100),
+                duration: 2900
+            }),
+        } as TestCase;
 
-  it("handles skipped test suites", (): void => {
-    const input: AggregatedResult = {
-      numFailedTestSuites: 0,
-      numFailedTests: 0,
-      numPassedTestSuites: 0,
-      numPassedTests: 0,
-      numPendingTestSuites: 1,
-      numPendingTests: 1,
-      numRuntimeErrorTestSuites: 0,
-      numTodoTests: 0,
-      numTotalTestSuites: 1,
-      numTotalTests: 1,
-      openHandles: [],
-      snapshot: emptySnapshotSummary,
-      startTime: 1511376995239,
-      success: true,
-      testResults: [
-        {
-          leaks: false,
-          numFailingTests: 0,
-          numPassingTests: 0,
-          numPendingTests: 1,
-          numTodoTests: 0,
-          openHandles: [],
-          perfStats: {
-            end: 1511376996104,
-            start: 1511376995923,
-            runtime: 181,
-            slow: false,
-          },
-          snapshot: emptySnapshot,
-          testFilePath: "C:\\Users\\Github\\test\\test.spec.js",
-          testResults: [
-            {
-              ancestorTitles: [],
-              duration: 181,
-              failureMessages: [],
-              fullName: "first",
-              numPassingAsserts: 0,
-              status: "pending",
-              title: "first",
-              location: {
-                column: 0,
-                line: 0,
-              },
-              failureDetails: [],
+        const mockIterator = function () {
+            let index = 0;
+            const values = [test1, test2];
+
+            return {
+                next: function () {
+                    if (index < values.length) {
+                        return {value: values[index++], done: false};
+                    } else {
+                        return {value: undefined, done: true};
+                    }
+                }
+            };
+        };
+
+        const module: TestModule = {
+            moduleId: "C:\\testPath\\test.js",
+            children: {
+                allSuites: () => [testSuite],
+                allTests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                }),
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                }),
             },
-          ],
-          sourceMaps: {},
-          skipped: true,
-        },
-      ],
-      wasInterrupted: false,
-    };
-    const result = generateTrx(input);
-    expect(result).toBeTruthy();
-  });
+            state: () => 'passed',
+            ok: () => true,
+            diagnostic: () => ({
+                duration: (4100 + 2900)
+            }),
+            errors: () => []
+        } as TestModule;
 
-  it("handles todo tests", (): void => {
-    const input: AggregatedResult = {
-      numFailedTestSuites: 0,
-      numFailedTests: 0,
-      numPassedTestSuites: 0,
-      numPassedTests: 0,
-      numPendingTestSuites: 0,
-      numPendingTests: 0,
-      numRuntimeErrorTestSuites: 0,
-      numTodoTests: 1,
-      numTotalTestSuites: 1,
-      numTotalTests: 1,
-      openHandles: [],
-      snapshot: emptySnapshotSummary,
-      startTime: 1511376995239,
-      success: true,
-      testResults: [
-        {
-          leaks: false,
-          numFailingTests: 0,
-          numPassingTests: 0,
-          numPendingTests: 0,
-          numTodoTests: 1,
-          openHandles: [],
-          perfStats: {
-            end: 1511376996104,
-            start: 1511376995923,
-            runtime: 181,
-            slow: false,
-          },
-          snapshot: emptySnapshot,
-          testFilePath: "C:\\Users\\Github\\test\\test.spec.js",
-          testResults: [
-            {
-              ancestorTitles: [],
-              duration: 181,
-              failureMessages: [],
-              fullName: "first",
-              numPassingAsserts: 0,
-              status: "todo",
-              title: "first",
-              location: {
-                column: 0,
-                line: 0,
-              },
-              failureDetails: [],
+        const testSuite: TestSuite = {
+            module: module,
+            children: {
+                allTests: () => [test1, test2],
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                })
             },
-          ],
-          sourceMaps: {},
-          skipped: true,
-        },
-      ],
-      wasInterrupted: false,
-    };
-    const result = generateTrx(input);
-    expect(result).toBeTruthy();
-  });
+            errors: () => []
+        } as TestSuite;
 
-  it("verify runtime suite failures", (done) => {
-    const input: AggregatedResult = {
-      numFailedTestSuites: 0,
-      numFailedTests: 0,
-      numPassedTestSuites: 1,
-      numPassedTests: 1,
-      numPendingTestSuites: 0,
-      numPendingTests: 0,
-      numRuntimeErrorTestSuites: 1,
-      numTodoTests: 0,
-      numTotalTestSuites: 2,
-      numTotalTests: 1,
-      openHandles: [],
-      snapshot: emptySnapshotSummary,
-      startTime: 1511376995239,
-      success: false,
-      testResults: [
-        {
-          leaks: false,
-          numFailingTests: 0,
-          numPassingTests: 1,
-          numPendingTests: 0,
-          numTodoTests: 0,
-          openHandles: [],
-          perfStats: {
-            end: 1511376996104,
-            start: 1511376995923,
-            runtime: 181,
-            slow: false,
-          },
-          snapshot: emptySnapshot,
-          testFilePath: "C:\\Users\\Github\\test\\test.spec.js",
-          testResults: [
-            {
-              ancestorTitles: [],
-              duration: 181,
-              failureMessages: [],
-              fullName: "first",
-              numPassingAsserts: 0,
-              status: "passed",
-              title: "first",
-              location: {
-                column: 0,
-                line: 0,
-              },
-              failureDetails: [],
-            },
-          ],
-          sourceMaps: {},
-          skipped: false,
-        },
-        {
-          failureMessage: "Test suite failed with runtime error",
-          leaks: false,
-          numFailingTests: 0,
-          numPassingTests: 0,
-          numPendingTests: 0,
-          numTodoTests: 0,
-          openHandles: [],
-          perfStats: {
-            end: 1511376996104,
-            start: 1511376995923,
-            runtime: 181,
-            slow: false,
-          },
-          snapshot: emptySnapshot,
-          testFilePath: "C:\\Users\\Github\\test\\test.spec2.js",
-          testResults: [],
-          sourceMaps: {},
-          skipped: false,
-          testExecError: {
-            message: '',
-            stack: 'Failing stack',
-          }
-        },
-      ],
-      wasInterrupted: false,
-    };
-
-    const result = generateTrx(input);
-
-    // Verify the summary has the proper test counts.
-    xml2js.parseString(result, (err, parsed) => {
-      expect(err).toBeFalsy();
-      expect(parsed).toBeTruthy();
-      expect(parsed.TestRun).toBeTruthy();
-      expect(parsed.TestRun.$).toBeTruthy();
-      expect(parsed.TestRun.$.xmlns).toEqual(
-        "http://microsoft.com/schemas/VisualStudio/TeamTest/2010",
-      );
-      expect(parsed.TestRun.Results).toBeTruthy();
-      expect(parsed.TestRun.Results.length).toEqual(1);
-      expect(parsed.TestRun.Results[0].UnitTestResult.length).toEqual(2);
-      expect(parsed.TestRun.Results[0].UnitTestResult.length).toEqual(2);
-
-      // Verify the summary values.
-      expect(parsed.TestRun.ResultSummary[0].$.outcome).toBe("Failed");
-      expect(parsed.TestRun.ResultSummary[0].Counters[0].$.total).toBe("2");
-      expect(parsed.TestRun.ResultSummary[0].Counters[0].$.executed).toBe("1");
-      expect(parsed.TestRun.ResultSummary[0].Counters[0].$.passed).toBe("1");
-      expect(parsed.TestRun.ResultSummary[0].Counters[0].$.failed).toBe("0");
-      expect(parsed.TestRun.ResultSummary[0].Counters[0].$.error).toBe("1");
-
-      // First test passed
-      expect(parsed.TestRun.Results[0].UnitTestResult[0].$.outcome).toEqual(
-        "Passed",
-      );
-      expect(parsed.TestRun.Results[0].UnitTestResult[0].$.duration).toEqual(
-        "00:00:00.181",
-      );
-
-      // Second test result represents the failed suite.
-      expect(parsed.TestRun.Results[0].UnitTestResult[1].$.outcome).toEqual(
-        "Failed",
-      );
-      expect(parsed.TestRun.Results[0].UnitTestResult[1].$.duration).toEqual(
-        "0",
-      );
-      expect(
-        parsed.TestRun.Results[0].UnitTestResult[1].Output[0].ErrorInfo[0]
-          .Message[0],
-      ).toEqual("Failing stack");
-
-      done();
+        const result = generateTrx([module]);
+        expect(result).toBeTruthy();
     });
-  });
+    it("handles skipped test suites", (): void => {
 
-  it("verify runtime suite failures with passing tests", (done) => {
-    const input: AggregatedResult = {
-      numFailedTestSuites: 1,
-      numFailedTests: 0,
-      numPassedTestSuites: 0,
-      numPassedTests: 1,
-      numPendingTestSuites: 0,
-      numPendingTests: 0,
-      numRuntimeErrorTestSuites: 1,
-      numTodoTests: 0,
-      numTotalTestSuites: 1,
-      numTotalTests: 1,
-      openHandles: [],
-      snapshot: emptySnapshotSummary,
-      startTime: 1511376995239,
-      success: false,
-      testResults: [
-        {
-          failureMessage: "Test suite failed with runtime error",
-          leaks: false,
-          numFailingTests: 0,
-          numPassingTests: 1,
-          numPendingTests: 0,
-          numTodoTests: 0,
-          openHandles: [],
-          perfStats: {
-            end: 1511376996104,
-            start: 1511376995923,
-            runtime: 181,
-            slow: false,
-          },
-          snapshot: emptySnapshot,
-          testFilePath: "C:\\Users\\Github\\test\\test.spec.js",
-          testResults: [
-            {
-              ancestorTitles: [],
-              duration: 181,
-              failureMessages: [],
-              fullName: "first",
-              numPassingAsserts: 0,
-              status: "passed",
-              title: "first",
-              location: {
-                column: 0,
-                line: 0,
-              },
-              failureDetails: [],
+        const test1: TestCase = {
+            module: {
+                moduleId: "C:\\Users\\Github\\test\\test.spec.js",
             },
-          ],
-          sourceMaps: {},
-          skipped: false,
-          testExecError: {
-            message: '',
-            stack: 'Failing stack',
-          }
-        },
-      ],
-      wasInterrupted: false,
-    };
+            result: () => ({
+                state: "pending"
+            }),
+            name: "first",
+            fullName: () => "first",
+            diagnostic: () => ({
+                startTime: 1478771929,
+                duration: 4100
+            }),
+        } as TestCase;
 
-    const result = generateTrx(input);
+        const mockIterator = function () {
+            let index = 0;
+            const values = [test1];
 
-    // Verify the summary has the proper test counts.
-    xml2js.parseString(result, (err, parsed) => {
-      expect(err).toBeFalsy();
-      expect(parsed).toBeTruthy();
-      expect(parsed.TestRun).toBeTruthy();
-      expect(parsed.TestRun.$).toBeTruthy();
-      expect(parsed.TestRun.$.xmlns).toEqual(
-        "http://microsoft.com/schemas/VisualStudio/TeamTest/2010",
-      );
-      expect(parsed.TestRun.Results).toBeTruthy();
-      expect(parsed.TestRun.Results.length).toEqual(1);
-      expect(parsed.TestRun.Results[0].UnitTestResult.length).toEqual(2);
-      expect(parsed.TestRun.Results[0].UnitTestResult.length).toEqual(2);
+            return {
+                next: function () {
+                    if (index < values.length) {
+                        return {value: values[index++], done: false};
+                    } else {
+                        return {value: undefined, done: true};
+                    }
+                }
+            };
+        };
 
-      // Verify the summary values.
-      expect(parsed.TestRun.ResultSummary[0].$.outcome).toBe("Failed");
-      expect(parsed.TestRun.ResultSummary[0].Counters[0].$.total).toBe("2");
-      expect(parsed.TestRun.ResultSummary[0].Counters[0].$.executed).toBe("1");
-      expect(parsed.TestRun.ResultSummary[0].Counters[0].$.passed).toBe("1");
-      expect(parsed.TestRun.ResultSummary[0].Counters[0].$.failed).toBe("0");
-      expect(parsed.TestRun.ResultSummary[0].Counters[0].$.error).toBe("1");
+        const module: TestModule = {
+            moduleId: "C:\\Users\\Github\\test\\test.spec.js",
+            children: {
+                allSuites: () => [testSuite],
+                allTests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                }),
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                }),
+            },
+            state: () => 'skipped',
+            ok: () => true,
+            diagnostic: () => ({
+                duration: (4100 + 2900)
+            }),
+            errors: () => []
+        } as TestModule;
 
-      // First test passed
-      expect(parsed.TestRun.Results[0].UnitTestResult[0].$.outcome).toEqual(
-        "Passed",
-      );
-      expect(parsed.TestRun.Results[0].UnitTestResult[0].$.duration).toEqual(
-        "00:00:00.181",
-      );
+        const testSuite: TestSuite = {
+            module: module,
+            children: {
+                allTests: () => [test1],
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                })
+            },
+            errors: () => []
+        } as TestSuite;
 
-      // Second test result represents the failed suite.
-      expect(parsed.TestRun.Results[0].UnitTestResult[1].$.outcome).toEqual(
-        "Failed",
-      );
-      expect(parsed.TestRun.Results[0].UnitTestResult[1].$.duration).toEqual(
-        "0",
-      );
-      expect(
-        parsed.TestRun.Results[0].UnitTestResult[1].Output[0].ErrorInfo[0]
-          .Message[0],
-      ).toEqual("Failing stack");
-
-      done();
+        const result = generateTrx([module]);
+        expect(result).toBeTruthy();
     });
-  });
 
-  it("verify postprocess handler", (done) => {
-    const input: AggregatedResult = {
-      numFailedTestSuites: 0,
-      numFailedTests: 0,
-      numPassedTestSuites: 1,
-      numPassedTests: 1,
-      numPendingTestSuites: 0,
-      numPendingTests: 0,
-      numRuntimeErrorTestSuites: 0,
-      numTodoTests: 0,
-      numTotalTestSuites: 1,
-      numTotalTests: 1,
-      openHandles: [],
-      snapshot: emptySnapshotSummary,
-      startTime: 1511376995239,
-      success: true,
-      testResults: [
-        {
-          leaks: false,
-          numFailingTests: 0,
-          numPassingTests: 1,
-          numPendingTests: 0,
-          numTodoTests: 0,
-          openHandles: [],
-          perfStats: {
-            end: 1511376996104,
-            start: 1511376995923,
-            runtime: 181,
-            slow: false,
-          },
-          snapshot: emptySnapshot,
-          testFilePath: "C:\\Users\\Github\\test\\test.spec.js",
-          testResults: [
-            {
-              ancestorTitles: [],
-              duration: 181,
-              failureMessages: [],
-              fullName: "first",
-              numPassingAsserts: 0,
-              status: "passed",
-              title: "first",
-              location: {
-                column: 0,
-                line: 0,
-              },
-              failureDetails: [],
+    it("handles queued test suites", (): void => {
+        const test1: TestCase = {
+            module: {
+                moduleId: "C:\\Users\\Github\\test\\test.spec.js",
             },
-          ],
-          sourceMaps: {},
-          skipped: false,
-        },
-      ],
-      wasInterrupted: false,
-    };
+            result: () => ({
+                state: "pending"
+            }),
+            name: "first",
+            fullName: () => "first",
+            diagnostic: () => ({
+                startTime: 1478771929,
+                duration: 4100
+            }),
+        } as TestCase;
 
-    const addResultFile = (
-      testSuiteResult: TestResult,
-      testResult: AssertionResult,
-      testResultNode: xmlbuilder.XMLElement,
-    ): void => {
-      testResultNode
-        .ele("ResultFiles")
-        .ele("ResultFile")
-        .att("path", "C:\\Users\\Github\\test\\test.spec.js");
-    };
+        const mockIterator = function () {
+            let index = 0;
+            const values = [test1];
 
-    const options: IOptions = {
-      outputFile: "",
-      postProcessTestResult: [addResultFile],
-    };
-    const result = generateTrx(input, options);
+            return {
+                next: function () {
+                    if (index < values.length) {
+                        return {value: values[index++], done: false};
+                    } else {
+                        return {value: undefined, done: true};
+                    }
+                }
+            };
+        };
 
-    xml2js.parseString(result, (err, parsed) => {
-      // Verify the file was added to the UnitTestResult.
-      expect(parsed.TestRun.Results[0].UnitTestResult[0].$.outcome).toEqual(
-        "Passed",
-      );
-      expect(
-        parsed.TestRun.Results[0].UnitTestResult[0].ResultFiles[0]
-          .ResultFile[0],
-      ).toBeTruthy();
-      expect(
-        parsed.TestRun.Results[0].UnitTestResult[0].ResultFiles[0].ResultFile[0]
-          .$.path,
-      ).toBe("C:\\Users\\Github\\test\\test.spec.js");
+        const module: TestModule = {
+            moduleId: "C:\\Users\\Github\\test\\test.spec.js",
+            children: {
+                allSuites: () => [testSuite],
+                allTests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                }),
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                }),
+            },
+            state: () => 'queued',
+            ok: () => true,
+            diagnostic: () => ({
+                duration: (4100 + 2900)
+            }),
+            errors: () => []
+        } as TestModule;
 
-      done();
+        const testSuite: TestSuite = {
+            module: module,
+            children: {
+                allTests: () => [test1],
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                })
+            },
+            errors: () => []
+        } as TestSuite;
+
+        const result = generateTrx([module]);
+        expect(result).toBeTruthy();
     });
-  });
 
-  it("calculate finishTime from test results", (done) => {
-    const input: AggregatedResult = {
-      numFailedTestSuites: 0,
-      numFailedTests: 0,
-      numPassedTestSuites: 1,
-      numPassedTests: 1,
-      numPendingTestSuites: 0,
-      numPendingTests: 0,
-      numRuntimeErrorTestSuites: 1,
-      numTodoTests: 0,
-      numTotalTestSuites: 2,
-      numTotalTests: 1,
-      openHandles: [],
-      snapshot: emptySnapshotSummary,
-      startTime: 1511376995239,
-      success: false,
-      testResults: [
-        {
-          leaks: false,
-          numFailingTests: 0,
-          numPassingTests: 1,
-          numPendingTests: 0,
-          numTodoTests: 0,
-          openHandles: [],
-          perfStats: {
-            end: 1511376996104,
-            start: 1511376995923,
-            runtime: 181,
-            slow: false,
-          },
-          snapshot: emptySnapshot,
-          testFilePath: "C:\\Users\\Github\\test\\test.spec.js",
-          testResults: [
-            {
-              ancestorTitles: [],
-              duration: 181,
-              failureMessages: [],
-              fullName: "first",
-              numPassingAsserts: 0,
-              status: "passed",
-              title: "first",
-              location: {
-                column: 0,
-                line: 0,
-              },
-              failureDetails: [],
+    it("verify runtime suite failures", () => {
+        const test1: TestCase = {
+            module: {
+                moduleId: "C:\\testPath\\test.js",
             },
-          ],
-          sourceMaps: {},
-          skipped: false,
-        },
-        {
-          leaks: false,
-          numFailingTests: 0,
-          numPassingTests: 1,
-          numPendingTests: 0,
-          numTodoTests: 0,
-          openHandles: [],
-          perfStats: {
-            end: 1511376996304,
-            start: 1511376996104,
-            runtime: 200,
-            slow: false,
-          },
-          snapshot: emptySnapshot,
-          testFilePath: "C:\\Users\\Github\\test\\test.spec.js",
-          testResults: [
-            {
-              ancestorTitles: [],
-              duration: 181,
-              failureMessages: [],
-              fullName: "first",
-              numPassingAsserts: 0,
-              status: "passed",
-              title: "first",
-              location: {
-                column: 0,
-                line: 0,
-              },
-              failureDetails: [],
+            result: () => ({
+                state: "passed"
+            }),
+            name: "works well",
+            fullName: () => "foo's > bar method > works well",
+            diagnostic: () => ({
+                startTime: 1511376995923,
+                duration: 181
+            }),
+        } as TestCase;
+
+        const test2: TestCase = {
+            module: {
+                moduleId: "C:\\testPath\\test.js",
             },
-          ],
-          sourceMaps: {},
-          skipped: false,
-        },
-      ],
-      wasInterrupted: false,
-    };
+            result: () => ({
+                state: "pending",
+                location: {
+                    column: 0,
+                    line: 0,
+                },
+            }),
+            name: "works not so well",
+            fullName: () => "foo's > bar method > works not so well",
+            diagnostic: () => ({
+                startTime: (1478771929 + 4100),
+                duration: 2900
+            }),
+        } as TestCase;
 
-    const result = generateTrx(input);
+        const mockIterator1 = function () {
+            let index = 0;
+            const values = [test1];
 
-    xml2js.parseString(result, (err, parsed) => {
-      expect(err).toBeFalsy();
-      expect(parsed).toBeTruthy();
-      expect(parsed.TestRun).toBeTruthy();
+            return {
+                next: function () {
+                    if (index < values.length) {
+                        return {value: values[index++], done: false};
+                    } else {
+                        return {value: undefined, done: true};
+                    }
+                }
+            };
+        };
 
-      const timeElement = parsed.TestRun.Times[0].$;
-      expect(timeElement).toBeTruthy();
-      expect(timeElement.start).toBeTruthy();
-      expect(timeElement.finish).toBeTruthy();
-      expect(timeElement.start).not.toEqual(timeElement.finish);
-      expect(timeElement.start).toEqual(new Date(1511376995239).toISOString());
-      expect(timeElement.finish).toEqual(new Date(1511376995239 + 200 + 181).toISOString());
+        const mockIterator2 = function () {
+            let index = 0;
+            const values = [test2];
 
-      done();
+            return {
+                next: function () {
+                    if (index < values.length) {
+                        return {value: values[index++], done: false};
+                    } else {
+                        return {value: undefined, done: true};
+                    }
+                }
+            };
+        };
+
+        const mockIteratorAll = function () {
+            let index = 0;
+            const values = [test1, test2];
+
+            return {
+                next: function () {
+                    if (index < values.length) {
+                        return {value: values[index++], done: false};
+                    } else {
+                        return {value: undefined, done: true};
+                    }
+                }
+            };
+        };
+
+        const module: TestModule = {
+            moduleId: "C:\\testPath\\test.js",
+            children: {
+                allSuites: () => [testSuite1, testSuite2],
+                allTests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIteratorAll
+                }),
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIteratorAll
+                }),
+            },
+            state: () => 'failed',
+            ok: () => true,
+            diagnostic: () => ({
+                duration: (4100 + 2900)
+            }),
+            errors: () => [{
+                message: "Failed stack"
+            }]
+        } as TestModule;
+
+        const testSuite1: TestSuite = {
+            module: module,
+            children: {
+                allTests: () => [test1],
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator1
+                })
+            },
+            errors: () => []
+        } as TestSuite;
+
+        const testSuite2: TestSuite = {
+            module: module,
+            children: {
+                allTests: () => [test2],
+                tests: () => ({
+                    next: () => test2,
+                    [Symbol.iterator]: mockIterator2
+                })
+            },
+            errors: () => [{
+                message: "Failing stack"
+            }]
+        } as TestSuite;
+
+        const result = generateTrx([module]);
+
+        // Verify the summary has the proper test counts.
+        xml2js.parseString(result, (err, parsed) => {
+            expect(err).toBeFalsy();
+            expect(parsed).toBeTruthy();
+            expect(parsed.TestRun).toBeTruthy();
+            expect(parsed.TestRun.$).toBeTruthy();
+            expect(parsed.TestRun.$.xmlns).toEqual(
+                "http://microsoft.com/schemas/VisualStudio/TeamTest/2010",
+            );
+            expect(parsed.TestRun.Results).toBeTruthy();
+            expect(parsed.TestRun.Results.length).toEqual(1);
+            expect(parsed.TestRun.Results[0].UnitTestResult.length).toEqual(3);
+
+            // Verify the summary values.
+            expect(parsed.TestRun.ResultSummary[0].$.outcome).toBe("Failed");
+            expect(parsed.TestRun.ResultSummary[0].Counters[0].$.total).toBe("3");
+            expect(parsed.TestRun.ResultSummary[0].Counters[0].$.executed).toBe("1");
+            expect(parsed.TestRun.ResultSummary[0].Counters[0].$.passed).toBe("1");
+            expect(parsed.TestRun.ResultSummary[0].Counters[0].$.failed).toBe("0");
+            expect(parsed.TestRun.ResultSummary[0].Counters[0].$.error).toBe("1");
+
+            // First test passed
+            expect(parsed.TestRun.Results[0].UnitTestResult[0].$.outcome).toEqual(
+                "Passed",
+            );
+            expect(parsed.TestRun.Results[0].UnitTestResult[0].$.duration).toEqual(
+                "00:00:00.181",
+            );
+
+            // Last test result represents the failed suite.
+            expect(parsed.TestRun.Results[0].UnitTestResult[2].$.outcome).toEqual(
+                "Failed",
+            );
+            expect(parsed.TestRun.Results[0].UnitTestResult[2].$.duration).toEqual(
+                "0",
+            );
+            expect(
+                parsed.TestRun.Results[0].UnitTestResult[2].Output[0].ErrorInfo[0]
+                    .Message[0],
+            ).toEqual("Failing stack");
+        });
     });
-  });
+
+    it("verify runtime suite failures with passing tests", () => {
+        const test1: TestCase = {
+            module: {
+                moduleId: "C:\\testPath\\test.js",
+            },
+            result: () => ({
+                state: "passed"
+            }),
+            name: "works well",
+            fullName: () => "foo's > bar method > works well",
+            diagnostic: () => ({
+                startTime: 1511376995923,
+                duration: 181
+            }),
+        } as TestCase;
+
+        const mockIterator = function () {
+            let index = 0;
+            const values = [test1];
+
+            return {
+                next: function () {
+                    if (index < values.length) {
+                        return {value: values[index++], done: false};
+                    } else {
+                        return {value: undefined, done: true};
+                    }
+                }
+            };
+        };
+
+        const module: TestModule = {
+            moduleId: "C:\\testPath\\test.js",
+            children: {
+                allSuites: () => [testSuite],
+                allTests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                }),
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                }),
+            },
+            state: () => 'failed',
+            ok: () => true,
+            diagnostic: () => ({
+                duration: (4100 + 2900)
+            }),
+            errors: () => [{
+                message: "Failed stack"
+            }]
+        } as TestModule;
+
+        const testSuite: TestSuite = {
+            module: module,
+            children: {
+                allTests: () => [test1],
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                })
+            },
+            errors: () => [{
+                message: "Failing stack"
+            }]
+        } as TestSuite;
+
+        const result = generateTrx([module]);
+
+        // Verify the summary has the proper test counts.
+        xml2js.parseString(result, (err, parsed) => {
+            expect(err).toBeFalsy();
+            expect(parsed).toBeTruthy();
+            expect(parsed.TestRun).toBeTruthy();
+            expect(parsed.TestRun.$).toBeTruthy();
+            expect(parsed.TestRun.$.xmlns).toEqual(
+                "http://microsoft.com/schemas/VisualStudio/TeamTest/2010",
+            );
+            expect(parsed.TestRun.Results).toBeTruthy();
+            expect(parsed.TestRun.Results.length).toEqual(1);
+            expect(parsed.TestRun.Results[0].UnitTestResult.length).toEqual(2);
+            expect(parsed.TestRun.Results[0].UnitTestResult.length).toEqual(2);
+
+            // Verify the summary values.
+            expect(parsed.TestRun.ResultSummary[0].$.outcome).toBe("Failed");
+            expect(parsed.TestRun.ResultSummary[0].Counters[0].$.total).toBe("2");
+            expect(parsed.TestRun.ResultSummary[0].Counters[0].$.executed).toBe("1");
+            expect(parsed.TestRun.ResultSummary[0].Counters[0].$.passed).toBe("1");
+            expect(parsed.TestRun.ResultSummary[0].Counters[0].$.failed).toBe("0");
+            expect(parsed.TestRun.ResultSummary[0].Counters[0].$.error).toBe("1");
+
+            // First test passed
+            expect(parsed.TestRun.Results[0].UnitTestResult[0].$.outcome).toEqual(
+                "Passed",
+            );
+            expect(parsed.TestRun.Results[0].UnitTestResult[0].$.duration).toEqual(
+                "00:00:00.181",
+            );
+
+            // Second test result represents the failed suite.
+            expect(parsed.TestRun.Results[0].UnitTestResult[1].$.outcome).toEqual(
+                "Failed",
+            );
+            expect(parsed.TestRun.Results[0].UnitTestResult[1].$.duration).toEqual(
+                "0",
+            );
+            expect(
+                parsed.TestRun.Results[0].UnitTestResult[1].Output[0].ErrorInfo[0]
+                    .Message[0],
+            ).toEqual("Failing stack");
+        });
+    });
+
+    it("verify postprocess handler", () => {
+
+        const test1: TestCase = {
+            module: {
+                moduleId: "C:\\Users\\Github\\test.spec.js",
+            },
+            result: () => ({
+                state: "passed"
+            }),
+            name: "first",
+            fullName: () => "first",
+            diagnostic: () => ({
+                startTime: 1478771929,
+                duration: 4100
+            }),
+        } as TestCase;
+
+        const mockIterator = function () {
+            let index = 0;
+            const values = [test1];
+
+            return {
+                next: function () {
+                    if (index < values.length) {
+                        return {value: values[index++], done: false};
+                    } else {
+                        return {value: undefined, done: true};
+                    }
+                }
+            };
+        };
+
+        const module: TestModule = {
+            moduleId: "C:\\Users\\Github\\test.spec.js",
+            children: {
+                allSuites: () => [testSuite],
+                allTests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                }),
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                }),
+            },
+            state: () => 'passed',
+            ok: () => true,
+            diagnostic: () => ({
+                duration: (4100 + 2900)
+            }),
+            errors: () => []
+        } as TestModule;
+
+        const testSuite: TestSuite = {
+            module: module,
+            children: {
+                allTests: () => [test1],
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                })
+            },
+            errors: () => []
+        } as TestSuite;
+
+        const addResultFile = (
+            testSuiteResult: TestSuite,
+            testResult: TestCase,
+            testResultNode: XMLElement,
+        ): void => {
+            testResultNode
+                .ele("ResultFiles")
+                .ele("ResultFile")
+                .att("path", "C:\\Users\\Github\\test\\test.spec.js");
+        };
+
+        const options: IOptions = {
+            outputFile: "",
+            postProcessTestResult: [addResultFile],
+        };
+        const result = generateTrx([module], options);
+
+        xml2js.parseString(result, (err, parsed) => {
+            // Verify the file was added to the UnitTestResult.
+            expect(parsed.TestRun.Results[0].UnitTestResult[0].$.outcome).toEqual(
+                "Passed",
+            );
+            expect(
+                parsed.TestRun.Results[0].UnitTestResult[0].ResultFiles[0]
+                    .ResultFile[0],
+            ).toBeTruthy();
+            expect(
+                parsed.TestRun.Results[0].UnitTestResult[0].ResultFiles[0].ResultFile[0]
+                    .$.path,
+            ).toBe("C:\\Users\\Github\\test\\test.spec.js");
+        });
+    });
+
+    it("calculate finishTime from test results", () => {
+        const test1: TestCase = {
+            module: {
+                moduleId: "C:\\testPath\\test.js",
+            },
+            result: () => ({
+                state: "passed"
+            }),
+            name: "works well",
+            fullName: () => "foo's > bar method > works well",
+            diagnostic: () => ({
+                startTime: 1511376995239,
+                duration: 181,
+            }),
+        } as TestCase;
+
+        const test2: TestCase = {
+            module: {
+                moduleId: "C:\\testPath\\test.js",
+            },
+            result: () => ({
+                state: "failed",
+                errors: [{
+                    message: "This did not go as planned"
+                }],
+                location: {
+                    column: 0,
+                    line: 0,
+                },
+            }),
+            name: "works not so well",
+            fullName: () => "foo's > bar method > works not so well",
+            diagnostic: () => ({
+                duration: 200
+            }),
+        } as TestCase;
+
+        const mockIterator = function () {
+            let index = 0;
+            const values = [test1, test2];
+
+            return {
+                next: function () {
+                    if (index < values.length) {
+                        return {value: values[index++], done: false};
+                    } else {
+                        return {value: undefined, done: true};
+                    }
+                }
+            };
+        };
+
+        const module: TestModule = {
+            moduleId: "C:\\testPath\\test.js",
+            children: {
+                allSuites: () => [testSuite],
+                allTests: () => ({
+                    next: () => ({value: test1}),
+                    [Symbol.iterator]: mockIterator
+                }),
+                tests: () => ({
+                    next: () => ({value: test1}),
+                    [Symbol.iterator]: mockIterator
+                }),
+            },
+            state: () => 'passed',
+            ok: () => true,
+            diagnostic: () => ({
+                startTime: 1511376995239,
+                duration: (181 + 200)
+            }),
+            errors: () => []
+        } as TestModule;
+
+        const testSuite: TestSuite = {
+            module: module,
+            children: {
+                allTests: () => [test1, test2],
+                tests: () => ({
+                    next: () => test1,
+                    [Symbol.iterator]: mockIterator
+                })
+            },
+            errors: () => []
+        } as TestSuite;
+
+        const result = generateTrx([module]);
+
+        xml2js.parseString(result, (err, parsed) => {
+            expect(err).toBeFalsy();
+            expect(parsed).toBeTruthy();
+            expect(parsed.TestRun).toBeTruthy();
+
+            const timeElement = parsed.TestRun.Times[0].$;
+            expect(timeElement).toBeTruthy();
+            expect(timeElement.start).toBeTruthy();
+            expect(timeElement.finish).toBeTruthy();
+            expect(timeElement.start).not.toEqual(timeElement.finish);
+            expect(timeElement.start).toEqual(new Date(1511376995239).toISOString());
+            expect(timeElement.finish).toEqual(new Date(1511376995239 + 200 + 181).toISOString());
+        });
+    });
 });

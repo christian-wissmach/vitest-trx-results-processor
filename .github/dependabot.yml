@@ -33,7 +33,4 @@ updates:
     - 17.4.1
   - dependency-name: typescript
     versions:
-    - 4.2.2
-  - dependency-name: ts-jest
-    versions:
-    - 26.5.2
+    - 5.7.0

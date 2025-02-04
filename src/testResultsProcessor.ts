@@ -1,20 +1,20 @@
-import { AggregatedResult } from "@jest/test-result";
 import { writeFileSync } from "fs";
 import mkdirp from "mkdirp";
 import path from "path";
 
 import { defaultOutputFile, defaultUserName } from "./constants";
 import { generateTrx, IOptions } from "./trx-generator";
+import { TestModule } from "vitest/node";
 
 const processor = (
   options: IOptions = {
     outputFile: defaultOutputFile,
     defaultUserName,
   },
-) => (testRunResult: AggregatedResult): AggregatedResult => {
+) => (testModules: TestModule[]): TestModule[] => {
   process.stdout.write("Generating TRX file...");
 
-  const trx = generateTrx(testRunResult, options);
+  const trx = generateTrx(testModules, options);
 
   const targetDir = path.dirname(path.resolve(options.outputFile));
   mkdirp.sync(targetDir);
@@ -24,7 +24,7 @@ const processor = (
   process.stdout.write(`TRX file output to '${options.outputFile}'\n`);
 
   // Return the input testRunResult to allow for chaining other result processors
-  return testRunResult;
+  return testModules;
 };
 
 export = processor;
