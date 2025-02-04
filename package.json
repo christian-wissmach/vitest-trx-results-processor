@@ -1,53 +1,49 @@
 {
-  "name": "jest-trx-results-processor",
-  "description": "Jest results processor for exporting into TRX files for Visual Studio",
-  "author": "Dan Homola",
-  "user": "no23reason",
+  "name": "vitest-trx-results-processor",
+  "description": "Vitest results processor for exporting into TRX files for Visual Studio",
+  "author": "Christian Wissmach",
+  "user": "christian-wissmach",
   "version": "0.0.0-semantic-release",
   "license": "MIT",
   "main": "dist/index.js",
   "repository": {
-    "url": "https://github.com/no23reason/jest-trx-results-processor",
+    "url": "https://github.com/christian-wissmach/vitest-trx-results-processor",
     "type": "git"
   },
   "bugs": {
-    "url": "https://github.com/no23reason/jest-trx-results-processor/issues"
+    "url": "https://github.com/christian-wissmach/vitest-trx-results-processor/issues"
   },
   "keywords": [
-    "jest",
-    "jestjs",
-    "jest-cli",
+    "vitest",
     "trx"
   ],
   "scripts": {
     "prepublishOnly": "npm run build",
     "build": "tsc",
-    "test": "jest --coverage",
+    "test": "vitest --run --coverage",
     "test:ci": "npm run test:eslint && npm test",
-    "test:tdd": "jest --watch",
+    "test:tdd": "vitest",
     "test:eslint": "eslint -c .eslintrc.js --ext .ts ./src",
     "semantic-release": "semantic-release"
   },
   "dependencies": {
-    "mkdirp": "^1.0.3",
     "uuid": "^8.0.0",
     "xmlbuilder": "^15.1.0"
   },
   "devDependencies": {
-    "@jest/test-result": "^26.0.1",
-    "@types/jest": "^26.0.15",
     "@types/mkdirp": "^1.0.0",
     "@types/uuid": "^8.0.0",
     "@types/xml2js": "^0.4.2",
     "@typescript-eslint/eslint-plugin": "^4.6.0",
     "@typescript-eslint/parser": "^4.6.0",
+    "@vitest/coverage-v8": "^3.0.5",
     "commitizen": "^4.0.3",
     "cz-conventional-changelog": "^3.1.0",
     "eslint": "^7.12.1",
-    "jest": "^26.0.1",
+    "mkdirp": "^3.0.1",
     "semantic-release": "^17.2.2",
-    "ts-jest": "^26.4.3",
-    "typescript": "^4.0.5",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.5",
     "xml2js": "^0.6.0"
   },
   "config": {
