@@ -8,10 +8,6 @@
 
 This package is used to export a TRX file from [Vitest](https://vitest.dev/) test runs to be used in [Visual Studio](https://www.visualstudio.com/) and [Visual Studio Team Services](https://www.visualstudio.com/vsts-test/).
 
-## Migration from 0.x
-
-Version 1.0.0 was rewritten to use reporters API. Either use that (see [Usage](#usage)), or update the require path in your configuration (see [Usage as testResultsProcessor](#usage-as-testresultsprocessor)).
-
 ## Installation
 
 ```
@@ -46,43 +42,6 @@ You can also pass additional arguments:
 ```
 
 Then run vitest as usual.
-
-## Usage as testResultsProcessor
-
-_Notice: this method of use will be removed in the next major version. Please use the reporters API described above._
-
-Create a `vitestTrxProcessor.js` file somewhere in your project (for this example I'll assume the `scripts` folder).
-There you can configure the processor, as Jest does not allow you to pass custom parameters to the results processor:
-
-```js
-// for vitest-trx-results-processor >= 1.0.0
-var builder = require("vitest-trx-results-processor/dist/testResultsProcessor"); // only this has changed since v 0.x
-// for vitest-trx-results-processor < 1.0.0
-var builder = require("vitest-trx-results-processor");
-
-var processor = builder({
-  outputFile: "relative/path/to/resulting.trx", // this defaults to "test-results.trx"
-  defaultUserName: "user name to use if automatic detection fails", // this defaults to "anonymous"
-});
-
-module.exports = processor;
-```
-
-Finally, point Vitest to your results processor in the `package.json`:
-
-```json
-{
-  "devDependencies": {
-    "vitest": "^3.0.5",
-    "vitest-trx-results-processor": "~0.0.5"
-  },
-  "jest": {
-    "testResultsProcessor": "./scripts/vitestTrxProcessor"
-  }
-}
-```
-
-Then you just run Vitest as you normally would.
 
 Minimal working configuration can be seen in the [examples folder](https://github.com/christian-wissmach/vitest-trx-results-processor/tree/master/examples).
 
