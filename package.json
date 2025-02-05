@@ -5,7 +5,7 @@
   "user": "christian-wissmach",
   "version": "0.0.0-semantic-release",
   "license": "MIT",
-  "export": "./dist/index.js",
+  "exports": "./dist/index.js",
   "type": "module",
   "repository": {
     "url": "https://github.com/christian-wissmach/vitest-trx-results-processor",
