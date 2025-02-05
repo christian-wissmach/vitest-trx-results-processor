@@ -5,7 +5,7 @@ import type {Reporter, TestModule} from "vitest/node";
 import {defaultOutputFile, defaultUserName} from "./constants";
 import {generateTrx, IOptions} from "./trx-generator";
 
-class TrxReporter implements Reporter {
+export default class TrxReporter implements Reporter {
   private readonly options: IOptions;
   private testModules: TestModule[] = [];
 
@@ -28,5 +28,3 @@ class TrxReporter implements Reporter {
     process.stdout.write(`TRX file output to "${this.options.outputFile}"\n`);
   }
 }
-
-module.exports = TrxReporter;
