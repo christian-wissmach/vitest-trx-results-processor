@@ -4,8 +4,8 @@ import {create as createXmlBuilder, XMLElement} from "xmlbuilder";
 
 import {SerializedError} from "@vitest/utils";
 import {TestCase, TestModule, TestSuite} from "vitest/node";
-import {testListAllLoadedResultsId, testListNotInListId, testOutcomeTable, testType} from "./constants";
-import {formatDuration, getEnvInfo} from "./utils";
+import {testListAllLoadedResultsId, testListNotInListId, testOutcomeTable, testType} from "./constants.js";
+import {formatDuration, getEnvInfo} from "./utils.js";
 
 /**
  * All the configuration options.

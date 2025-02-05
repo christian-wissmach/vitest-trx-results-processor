@@ -2,5 +2,5 @@
 declare interface WebSocket {}
 
 declare namespace WebAssembly {
-    interface Module {}
+  interface Module {}
 }
