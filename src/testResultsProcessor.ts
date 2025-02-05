@@ -2,8 +2,8 @@ import { writeFileSync } from "fs";
 import { mkdirp } from "mkdirp";
 import path from "path";
 
-import { defaultOutputFile, defaultUserName } from "./constants";
-import { generateTrx, IOptions } from "./trx-generator";
+import { defaultOutputFile, defaultUserName } from "./constants.js";
+import { generateTrx, IOptions } from "./trx-generator.js";
 import { TestModule } from "vitest/node";
 
 const processor = (

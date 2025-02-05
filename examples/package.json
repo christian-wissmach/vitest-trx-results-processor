@@ -10,9 +10,6 @@
   },
   "devDependencies": {
     "vitest": "^3.0.5",
-    "vitest-trx-results-processor": "~0.0.5"
-  },
-  "jest": {
-    "testResultsProcessor": "./scripts/vitestTrxProcessor"
+    "vitest-trx-results-processor": "~1.0.0"
   }
 }

@@ -2,8 +2,8 @@ import {writeFileSync} from "fs";
 import path from "path";
 import {mkdirp} from "mkdirp";
 import type {Reporter, TestModule} from "vitest/node";
-import {defaultOutputFile, defaultUserName} from "./constants";
-import {generateTrx, IOptions} from "./trx-generator";
+import {defaultOutputFile, defaultUserName} from "./constants.js";
+import {generateTrx, IOptions} from "./trx-generator.js";
 
 export default class TrxReporter implements Reporter {
   private readonly options: IOptions;
