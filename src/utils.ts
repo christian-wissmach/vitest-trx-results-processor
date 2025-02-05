@@ -1,4 +1,3 @@
-import { AssertionResult } from "@jest/test-result";
 import * as os from "os";
 
 // Adapted from https://github.com/hatchteam/karma-trx-reporter
@@ -24,16 +23,6 @@ export const formatDuration = (duration: number): string => {
 };
 
 // Auxillary test data functions
-export const getFullTestName = (testResult: AssertionResult): string =>
-  testResult.ancestorTitles && testResult.ancestorTitles.length
-    ? `${testResult.ancestorTitles.join(" / ")} / ${testResult.title}`
-    : testResult.title;
-
-export const getTestClassName = (testResult: AssertionResult): string =>
-  testResult.ancestorTitles && testResult.ancestorTitles.length
-    ? testResult.ancestorTitles[0]
-    : "No suite";
-
 export const getEnvInfo = (
   defaultUserName = "anonymous",
 ): { computerName: string; userName: string } => ({

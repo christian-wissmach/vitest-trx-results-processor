@@ -1,14 +1,15 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "ES2022",
     "esModuleInterop": true,
-    "target": "es5",
+    "target": "ES2022",
     "noImplicitAny": true,
+    "moduleResolution": "Bundler",
     "sourceMap": false,
     "strictNullChecks": true,
     "outDir": "dist",
-    "lib": ["es2015"]
+    "lib": ["ES2022"]
   },
   "exclude": ["src/__tests__/**/*", "node_modules/**/*"],
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "vitest.d.ts"]
 }
